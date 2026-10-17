@@ -9,6 +9,22 @@
 
 > 한국어 안내: [README.ko.md](README.ko.md)
 
+## Demo: MOA FPS in Unity
+
+An agent rebuilt MOA FPS (a C++/raylib game) in a new Unity 6 project using only the Direct MCP tools: movement, the VK-7 rifle, 7 bots on a NavMesh and the Quarry map imported from its text map format, then brought in the original's own Blender models, photo textures, lighting and HUD.
+
+![First-person view with the VK-7, built by an agent through Direct MCP](docs/demo/first-person.jpg)
+
+| A bot firing (chase camera) | The Quarry map |
+|---|---|
+| ![Bot firing at another bot](docs/demo/spectate.jpg) | ![Quarry overview](docs/demo/overview.jpg) |
+
+- **Same numbers as the original.** Movement, weapon, bot and match values are read at runtime from the game's original `.ini` files.
+- **Same look as the original.** URP shaders written to match the original's GLSL (baked vertex colours, team paint, photo PBR surfaces), a first-person rig posed like its viewmodel code, and a HUD laid out from its HUD code.
+- **The agent tested its own work.** Scripts → `refresh_assets` + `unity_status` for compile errors → `execute_csharp` to import the map (82 props, 18 spawns), bake the NavMesh and build prefabs → `screenshot` to check lighting and the HUD → `play_mode` + `playtest` to watch bots find and shoot each other with no errors.
+- **Damage math checked in play mode:** a 37 m headshot did 44 damage = 26 × 0.866 (falloff) × 1.95 (head).
+- Verified headless; mouse/keyboard feel and the synthesized sounds have not been checked by a person yet.
+
 ## Install (2 minutes)
 
 1. Unity → **Window → Package Manager → + → Add package from git URL**
