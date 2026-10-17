@@ -1,0 +1,26 @@
+{
+  "name": "com.directmcp.unity",
+  "version": "0.1.0",
+  "displayName": "Unity Direct MCP",
+  "description": "Your Unity Editor becomes an MCP server. No Python, no Node, no login: install this package and connect Claude Code, Cursor or VS Code to http://127.0.0.1:<port>/mcp.",
+  "unity": "2022.3",
+  "license": "MIT",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.modules.imageconversion": "1.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "ai",
+    "llm",
+    "claude",
+    "agent",
+    "model-context-protocol"
+  ],
+  "author": {
+    "name": "growing7696-cmyk",
+    "url": "https://github.com/growing7696-cmyk"
+  },
+  "documentationUrl": "https://github.com/growing7696-cmyk/unity-direct-mcp",
+  "licensesUrl": "https://github.com/growing7696-cmyk/unity-direct-mcp/blob/main/LICENSE"
+}

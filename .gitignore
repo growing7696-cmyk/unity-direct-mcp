@@ -1,0 +1,14 @@
+.DS_Store
+*.swp
+
+# Unity sandbox project
+TestProject/[Ll]ibrary/
+TestProject/[Tt]emp/
+TestProject/[Ll]ogs/
+TestProject/[Oo]bj/
+TestProject/[Uu]ser[Ss]ettings/
+TestProject/*.csproj
+TestProject/*.sln
+TestProject/.mcp.json
+TestProject/.cursor/
+TestProject/.vscode/
