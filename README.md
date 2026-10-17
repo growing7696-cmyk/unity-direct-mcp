@@ -3,8 +3,8 @@
 **Your Unity Editor *is* the MCP server.** Install one package, click one button, and Claude Code / Cursor / VS Code can see, build and play-test your game.
 
 - **No Python, no Node.js, no account.** The server runs inside the Editor on `127.0.0.1`.
-- **8 sharp tools instead of 70.** One of them runs any C# against the full Editor API, so the agent is never stuck waiting for a tool that doesn't exist.
-- **Agents that check their own work.** Compile errors, console logs, play mode and screenshots close the loop: write → compile → fix → play → look → fix.
+- **9 sharp tools instead of 70.** One of them runs any C# against the full Editor API, so the agent is never stuck waiting for a tool that doesn't exist.
+- **Agents that check their own work.** Compile errors, console logs, timed play-tests and screenshots (HUD included) close the loop: write → compile → fix → play → look → fix.
 - **Script reloads don't break the session.** Requests in flight get a clean "Unity is reloading" answer instead of a dropped socket, and the server is back in about 2 seconds.
 
 > 한국어 안내: [README.ko.md](README.ko.md)
@@ -41,9 +41,10 @@ Requires Unity 2022.3 or newer. Tested on Unity 6000.6 (macOS).
 | `inspect_object` | Every serialized field of a GameObject's components, or of an asset (`Assets/...`). |
 | `execute_csharp` | Runs C# in the Editor (≈0.3 s compile with Unity's bundled Roslyn). Returns the value plus any `Debug.Log` output. Changes are grouped into one Undo step. |
 | `refresh_assets` | Imports files the agent wrote and starts compilation. |
-| `play_mode` | Enter / exit / pause / resume. |
+| `play_mode` | Enter / exit / pause / resume. The game keeps running when the Editor is in the background, so it doesn't freeze while the agent works from a terminal. |
+| `playtest` | Lets the game run for N seconds and reports watched C# values over time, screenshots along the way and every error logged during the run. `time_scale` covers a long match quickly. |
 | `read_console` | Console messages with stack traces, kept across script reloads. |
-| `screenshot` | Renders the game or scene camera and returns the image so the agent can look at it. |
+| `screenshot` | Returns an image so the agent can look. In play mode it's the Game view as the player sees it, UI included (Canvas, IMGUI, UI Toolkit); in edit mode the camera plus overlay canvases, or the Scene view. |
 
 Scripts are written with the agent's own file tools (it already edits files well), then `refresh_assets` + `unity_status` report compile errors back.
 

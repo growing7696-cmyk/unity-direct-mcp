@@ -6,7 +6,8 @@
       "source": "local",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.2.1",
-        "com.unity.modules.imageconversion": "1.0.0"
+        "com.unity.modules.imageconversion": "1.0.0",
+        "com.unity.modules.ui": "1.0.0"
       }
     },
     "com.unity.ext.nunit": {

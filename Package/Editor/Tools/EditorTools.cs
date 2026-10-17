@@ -11,6 +11,23 @@ using UnityEngine.SceneManagement;
 
 namespace DirectMcp.Tools
 {
+    /// <summary>
+    /// Play mode normally stops ticking when the Editor is not the focused app, which is exactly the situation when
+    /// an agent drives it from a terminal: the game sits on frame 1. Keep it running for the play session.
+    /// Application.runInBackground set here is a play-mode value and does not change Player Settings.
+    /// </summary>
+    [InitializeOnLoad]
+    static class PlayInBackground
+    {
+        static PlayInBackground()
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredPlayMode && Settings.Enabled) Application.runInBackground = true;
+            };
+        }
+    }
+
     public static class EditorTools
     {
         [McpTool("unity_status",
@@ -100,6 +117,9 @@ namespace DirectMcp.Tools
                 ["compiling"] = EditorApplication.isCompiling,
                 ["importing"] = EditorApplication.isUpdating,
                 ["selection"] = Selection.activeGameObject != null ? ObjectPaths.PathOf(Selection.activeGameObject) : null,
+                ["play"] = EditorApplication.isPlaying
+                    ? new JObject { ["frame"] = Time.frameCount, ["time"] = Math.Round(Time.time, 2), ["time_scale"] = Time.timeScale }
+                    : null,
             };
         }
 
@@ -132,11 +152,12 @@ namespace DirectMcp.Tools
                         return ToolResult.Error("Cannot enter play mode: scripts have compile errors. See unity_status.");
                     LogBuffer.Clear();
                     // Defer so this response is sent before the domain reload.
-                    EditorApplication.delayCall += () => EditorApplication.isPlaying = true;
-                    return ToolResult.Text("Entering play mode (console cleared). Next: unity_status with wait_seconds=30.");
+                    NextUpdate(() => EditorApplication.isPlaying = true);
+                    return ToolResult.Text("Entering play mode (console cleared). Next: unity_status with wait_seconds=30, " +
+                        "then playtest to let it run and watch values, or screenshot / read_console.");
                 case "exit":
                     if (!EditorApplication.isPlaying) return ToolResult.Text("Not in play mode.");
-                    EditorApplication.delayCall += () => EditorApplication.isPlaying = false;
+                    NextUpdate(() => EditorApplication.isPlaying = false);
                     return ToolResult.Text("Exiting play mode.");
                 case "pause":
                     EditorApplication.isPaused = true;
@@ -147,6 +168,21 @@ namespace DirectMcp.Tools
                 default:
                     return ToolResult.Error("action must be enter, exit, pause or resume.");
             }
+        }
+
+        /// <summary>
+        /// Runs once on the next Editor update. EditorApplication.delayCall is not processed while the Editor is
+        /// in the background, which is where it is when an agent drives it from a terminal.
+        /// </summary>
+        static void NextUpdate(Action action)
+        {
+            EditorApplication.CallbackFunction once = null;
+            once = () =>
+            {
+                EditorApplication.update -= once;
+                action();
+            };
+            EditorApplication.update += once;
         }
 
         [McpTool("read_console",

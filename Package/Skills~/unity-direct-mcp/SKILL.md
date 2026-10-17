@@ -1,11 +1,11 @@
 ---
 name: unity-direct-mcp
-description: Build, edit and play-test Unity projects through the Unity Direct MCP tools (unity_status, scene_hierarchy, inspect_object, execute_csharp, refresh_assets, play_mode, read_console, screenshot). Use this whenever the user asks for anything inside a Unity project or scene - making a game, adding a player/enemy/level/UI, changing GameObjects, components, prefabs, materials or scripts, fixing Unity compile or runtime errors, or "check if it works" - even if they never mention MCP. Covers the look-before-you-change workflow, safe C# recipes for the Editor API, and the compile/reload/play-test loop.
+description: Build, edit and play-test Unity projects through the Unity Direct MCP tools (unity_status, scene_hierarchy, inspect_object, execute_csharp, refresh_assets, play_mode, playtest, read_console, screenshot). Use this whenever the user asks for anything inside a Unity project or scene - making a game, adding a player/enemy/level/UI, changing GameObjects, components, prefabs, materials or scripts, fixing Unity compile or runtime errors, or "check if it works" - even if they never mention MCP. Covers the look-before-you-change workflow, safe C# recipes for the Editor API, and the compile/reload/play-test loop.
 ---
 
 # Unity Direct MCP
 
-You are driving a live Unity Editor. The tools give you eyes (status, hierarchy, inspect, console, screenshot) and hands (execute_csharp, your own file edits, play mode). Agents that skip the eyes guess object names, write code against fields that don't exist, and report success on games that don't run. The loop below exists to prevent that.
+You are driving a live Unity Editor. The tools give you eyes (status, hierarchy, inspect, console, screenshot) and hands (execute_csharp, your own file edits, play mode, playtest). Agents that skip the eyes guess object names, write code against fields that don't exist, and report success on games that don't run. The loop below exists to prevent that.
 
 ## The loop
 
@@ -13,8 +13,20 @@ You are driving a live Unity Editor. The tools give you eyes (status, hierarchy,
 2. **Write scripts as files** under `Assets/Scripts/` with your normal file tools. One MonoBehaviour per file, file name = class name.
 3. **Compile.** `refresh_assets`, then `unity_status` with `wait_seconds: 60`. If `last_compile.succeeded` is false, fix every error before anything else — Unity will not enter play mode or load new types while scripts are broken.
 4. **Wire up the scene** with `execute_csharp`: create objects, add your components, assign references, make prefabs and materials, then save (see recipes).
-5. **Verify.** `screenshot` to check layout and camera framing. `play_mode` enter → `unity_status` with `wait_seconds: 30` → wait a moment (`sleep 3` in the shell) → `read_console` types `["error","warning"]` and `screenshot` → `play_mode` exit.
-6. **Report honestly**: what you checked, what you saw, what you could not verify (e.g. input feel, UI overlay — screenshots don't include Screen Space Overlay canvases).
+5. **Verify.** `screenshot` to check layout and camera framing. Then `play_mode` enter → `unity_status` with `wait_seconds: 30` → `playtest` → `play_mode` exit.
+6. **Report honestly**: what you checked, what you saw, what you could not verify (e.g. how the controls feel to a person).
+
+## Play-testing
+
+`playtest` lets the running game play for a while (`seconds`, default 10) and comes back with:
+
+- a table of your `watch` expressions over time, so you can see things change: `"GameObject.Find(\"Player\").transform.position"`, `"GameObject.FindGameObjectsWithTag(\"Enemy\").Length"`, `"Object.FindAnyObjectByType<ScoreManager>().score"`
+- `screenshots` along the way (default 2), UI and HUD included
+- every error and warning logged during the run, grouped, plus the last logs
+
+Pick watch values that prove the feature works, not just that nothing crashed: an enemy's distance to the player should shrink, health should drop when something shoots, a timer should count down. Use `time_scale` (e.g. 4) to cover a long match quickly. A value like `<NullReferenceException: ...>` means the expression itself failed (object not found), not the game.
+
+The game keeps running while the Editor is in the background, but the Editor throttles itself there (about 10 fps on macOS), so the frame count is low. Game time is still correct. `unity_status` shows `play.frame` and `play.time` if you want to check the game is advancing.
 
 ## Script reloads
 
@@ -39,6 +51,7 @@ Ready-made snippets for the common jobs (objects, components and private fields,
 - **Input does nothing**: the project uses the Input System package but the script uses `Input.GetAxis` (or the reverse). Check with the input recipe before writing movement code.
 - **`NullReferenceException` on play**: a serialized reference was never assigned. Assign it with `SerializedObject` in the scene, or look it up in `Awake`.
 - **Camera sees nothing**: no camera tagged `MainCamera`, or it points away. Use `screenshot` after placing things.
+- **Nothing moves in play mode**: check `play.frame` in `unity_status`. If it advances, the problem is in your scripts (disabled component, zero speed, `Time.timeScale` 0); watch the values with `playtest`.
 - **Physics objects fall through the floor**: the floor has no collider, or the moving object has a Rigidbody without a collider.
 - **Edits vanish**: the scene wasn't saved, or changes were made in play mode.
 
