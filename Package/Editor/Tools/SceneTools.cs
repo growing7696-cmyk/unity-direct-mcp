@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -234,60 +235,180 @@ namespace DirectMcp.Tools
         static string Fmt(Vector2 v) => $"({v.x:0.###}, {v.y:0.###})";
 
         [McpTool("screenshot",
-            "Render a camera to a PNG and return it so you can see the result. view='game' uses the main camera " +
-            "(or the camera named in 'camera'); view='scene' uses the Scene view camera. Screen-space-overlay UI is not included.",
+            "See the game. In play mode the default captures the Game view exactly as the player sees it, UI included " +
+            "(Canvas, IMGUI/OnGUI, UI Toolkit). In edit mode, or with 'camera', it renders that camera (default: main camera) " +
+            "with Screen Space Overlay canvases drawn on top. view='scene' uses the Scene view camera.",
             InputSchema = @"{""type"":""object"",""properties"":{
                 ""view"":{""type"":""string"",""enum"":[""game"",""scene""],""description"":""Default game.""},
                 ""camera"":{""type"":""string"",""description"":""Hierarchy path of a specific camera.""},
-                ""width"":{""type"":""integer"",""description"":""Default 960, max 1920.""},
+                ""width"":{""type"":""integer"",""description"":""Default 960, max 1920. In play mode the image keeps the Game view's aspect ratio within width x height.""},
                 ""height"":{""type"":""integer"",""description"":""Default 540, max 1080.""}}}")]
         public static ToolResult Screenshot(JObject args)
         {
             int w = Mathf.Clamp((int?)args["width"] ?? 960, 64, 1920);
             int h = Mathf.Clamp((int?)args["height"] ?? 540, 64, 1080);
-            var view = (string)args["view"] ?? "game";
-            var camPath = (string)args["camera"];
+            var shot = Capture.Take((string)args["view"] ?? "game", (string)args["camera"], w, h);
+            if (shot.Error != null) return ToolResult.Error(shot.Error);
+            return ToolResult.Text(shot.Info).AddImage(shot.Png);
+        }
+    }
+
+    /// <summary>Screenshots for the screenshot and playtest tools. Call on the main thread.</summary>
+    public static class Capture
+    {
+        public sealed class Shot
+        {
+            public byte[] Png;
+            public string Info;
+            public string Error;
+        }
+
+        public static Shot Take(string view, string cameraPath, int maxWidth, int maxHeight)
+        {
+            if (view != "scene" && string.IsNullOrEmpty(cameraPath) && EditorApplication.isPlaying)
+            {
+                var png = GameView(maxWidth, maxHeight, out var size);
+                if (png != null) return new Shot { Png = png, Info = $"Game view as the player sees it (UI included), {size}." };
+            }
 
             Camera cam;
-            if (!string.IsNullOrEmpty(camPath))
+            if (!string.IsNullOrEmpty(cameraPath))
             {
-                cam = ObjectPaths.Find(camPath)?.GetComponent<Camera>();
-                if (cam == null) return ToolResult.Error($"No Camera at '{camPath}'.");
+                cam = ObjectPaths.Find(cameraPath)?.GetComponent<Camera>();
+                if (cam == null) return new Shot { Error = $"No Camera at '{cameraPath}'." };
             }
             else if (view == "scene")
             {
                 cam = SceneView.lastActiveSceneView != null ? SceneView.lastActiveSceneView.camera : null;
-                if (cam == null) return ToolResult.Error("No Scene view is open.");
+                if (cam == null) return new Shot { Error = "No Scene view is open." };
             }
             else
             {
                 cam = Camera.main ?? Camera.allCameras.OrderByDescending(c => c.depth).FirstOrDefault();
-                if (cam == null) return ToolResult.Error("No enabled camera in the scene. Add one, or use view='scene'.");
+                if (cam == null) return new Shot { Error = "No enabled camera in the scene. Add one, or use view='scene'." };
             }
 
-            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
-            var prevTarget = cam.targetTexture;
-            var prevActive = RenderTexture.active;
-            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            bool withUi = view != "scene";
+            var t = cam.transform;
+            return new Shot
+            {
+                Png = Render(cam, maxWidth, maxHeight, withUi, out int overlays),
+                Info = $"Camera '{ObjectPaths.PathOf(cam.gameObject)}' at {Fmt(t.position)} looking {Fmt(t.forward)}, {maxWidth}x{maxHeight}" +
+                       (overlays > 0 ? $", {overlays} overlay canvas(es) drawn on top." : "."),
+            };
+        }
+
+        static Type _gameViewType;
+        static MethodInfo _renderView;
+
+        /// <summary>
+        /// Renders the Game view through its own code path (PlayModeView.RenderView), which draws the cameras plus
+        /// Canvas, IMGUI and UI Toolkit. That is internal Editor API, so any failure returns null and the caller
+        /// falls back to rendering the camera.
+        /// </summary>
+        static byte[] GameView(int maxWidth, int maxHeight, out string size)
+        {
+            size = null;
+            Texture2D tex = null;
             try
             {
-                cam.targetTexture = rt;
-                cam.Render();
-                RenderTexture.active = rt;
-                tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-                tex.Apply();
-                var png = tex.EncodeToPNG();
-                var t = cam.transform;
-                return ToolResult.Text($"Camera '{ObjectPaths.PathOf(cam.gameObject)}' at {Fmt(t.position)} looking {Fmt(t.forward)}, {w}x{h}.")
-                    .AddImage(png);
+                _gameViewType ??= typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+                _renderView ??= _gameViewType?.BaseType?.GetMethod("RenderView", BindingFlags.Instance | BindingFlags.NonPublic,
+                    null, new[] { typeof(Vector2), typeof(bool) }, null);
+                if (_renderView == null) return null;
+                var views = Resources.FindObjectsOfTypeAll(_gameViewType);
+                if (views.Length == 0) return null;
+                if (!(_renderView.Invoke(views[0], new object[] { new Vector2(-1, -1), false }) is RenderTexture src) || src.width < 16 || src.height < 16)
+                    return null;
+
+                float scale = Mathf.Min(1f, Mathf.Min((float)maxWidth / src.width, (float)maxHeight / src.height));
+                int w = Mathf.Max(16, Mathf.RoundToInt(src.width * scale));
+                int h = Mathf.Max(16, Mathf.RoundToInt(src.height * scale));
+                var dst = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+                // The Game view texture is stored top-down on Metal, D3D and Vulkan.
+                if (SystemInfo.graphicsUVStartsAtTop) Graphics.Blit(src, dst, new Vector2(1, -1), new Vector2(0, 1));
+                else Graphics.Blit(src, dst);
+                tex = ReadBack(dst, w, h);
+                RenderTexture.ReleaseTemporary(dst);
+
+                // A Game view hidden behind another tab is not rendered and comes back as one flat color.
+                if (IsFlat(tex)) return null;
+                size = $"{w}x{h}";
+                return tex.EncodeToPNG();
+            }
+            catch
+            {
+                return null;
             }
             finally
             {
-                cam.targetTexture = prevTarget;
-                RenderTexture.active = prevActive;
-                Object.DestroyImmediate(rt);
-                Object.DestroyImmediate(tex);
+                if (tex != null) Object.DestroyImmediate(tex);
             }
         }
+
+        static byte[] Render(Camera cam, int w, int h, bool withOverlayUi, out int overlayCount)
+        {
+            // Screen Space Overlay canvases are drawn by the Game view, not by cameras, so render them through this
+            // camera for the shot and put them back afterwards.
+            var overlays = new List<(Canvas canvas, Camera worldCamera, float planeDistance)>();
+            if (withOverlayUi)
+                foreach (var c in Resources.FindObjectsOfTypeAll<Canvas>())
+                    if (c.gameObject.scene.IsValid() && c.isRootCanvas && c.isActiveAndEnabled && c.renderMode == RenderMode.ScreenSpaceOverlay)
+                        overlays.Add((c, c.worldCamera, c.planeDistance));
+            overlayCount = overlays.Count;
+
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
+            var prevTarget = cam.targetTexture;
+            Texture2D tex = null;
+            try
+            {
+                cam.targetTexture = rt;
+                foreach (var o in overlays)
+                {
+                    o.canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                    o.canvas.worldCamera = cam;
+                    o.canvas.planeDistance = cam.nearClipPlane + 0.01f;
+                }
+                if (overlays.Count > 0) Canvas.ForceUpdateCanvases();
+                cam.Render();
+                tex = ReadBack(rt, w, h);
+                return tex.EncodeToPNG();
+            }
+            finally
+            {
+                foreach (var o in overlays)
+                {
+                    o.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    o.canvas.worldCamera = o.worldCamera;
+                    o.canvas.planeDistance = o.planeDistance;
+                }
+                if (overlays.Count > 0) Canvas.ForceUpdateCanvases();
+                cam.targetTexture = prevTarget;
+                Object.DestroyImmediate(rt);
+                if (tex != null) Object.DestroyImmediate(tex);
+            }
+        }
+
+        static Texture2D ReadBack(RenderTexture rt, int w, int h)
+        {
+            var prev = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            RenderTexture.active = prev;
+            return tex;
+        }
+
+        static bool IsFlat(Texture2D tex)
+        {
+            var first = tex.GetPixel(0, 0);
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
+                    if (tex.GetPixel(tex.width * (2 * x + 1) / 16, tex.height * (2 * y + 1) / 16) != first) return false;
+            return true;
+        }
+
+        static string Fmt(Vector3 v) => $"({v.x:0.###}, {v.y:0.###}, {v.z:0.###})";
     }
 }

@@ -19,7 +19,7 @@ namespace DirectMcp
     [InitializeOnLoad]
     public static class McpServer
     {
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
         static readonly string[] SupportedProtocols = { "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05" };
 
         const string Instructions =
@@ -28,7 +28,7 @@ Workflow that works well:
 1. Call unity_status and scene_hierarchy first to see what exists. Never guess object names.
 2. Write or edit C# scripts with your own file tools (files under Assets/), then call refresh_assets and unity_status(wait_seconds=60) to get compile errors. Fix errors before continuing.
 3. Use execute_csharp for anything in the Editor API: creating GameObjects, adding components, setting fields, making prefabs/materials, saving scenes (EditorSceneManager.SaveOpenScenes()).
-4. Verify your work: screenshot to look at the result, play_mode(enter) to test, read_console for runtime errors, then play_mode(exit).
+4. Verify your work: screenshot to look at the result (in play mode it includes the UI), play_mode(enter), then playtest to let the game run while watching values and collecting errors, then play_mode(exit).
 Unity reloads scripts after a successful compile and when entering play mode. During that window (2-10 s) calls may fail or report that Unity is reloading: wait a few seconds and call unity_status again.";
 
         static HttpListener _listener;

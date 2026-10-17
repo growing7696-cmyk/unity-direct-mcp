@@ -129,7 +129,7 @@ namespace DirectMcp.Tools
 
         // ─── Compilation with the Editor's bundled Roslyn ───
 
-        static string[] ReferencePaths()
+        internal static string[] ReferencePaths()
         {
             var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
@@ -178,7 +178,7 @@ namespace DirectMcp.Tools
             return (null, null);
         }
 
-        static byte[] Compile(string source, string[] references, out List<string> errors)
+        internal static byte[] Compile(string source, string[] references, out List<string> errors)
         {
             errors = new List<string>();
             var (dotnet, csc) = FindCompiler();
@@ -257,7 +257,7 @@ namespace DirectMcp.Tools
 
         // ─── Result formatting ───
 
-        static string Describe(object value, int depth = 0)
+        internal static string Describe(object value, int depth = 0)
         {
             switch (value)
             {
