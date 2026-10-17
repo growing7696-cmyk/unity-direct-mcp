@@ -9,18 +9,19 @@
 
 ## 데모: 유니티로 옮긴 MOA FPS
 
-AI 에이전트가 Direct MCP 도구만으로 새 Unity 6 프로젝트에 MOA FPS(C++/raylib 게임)의 핵심 플레이를 다시 만들었어요. 이동, VK-7 소총, NavMesh 위의 봇 7명, 그리고 텍스트 맵 파일에서 가져온 Quarry 맵까지요.
+AI 에이전트가 Direct MCP 도구만으로 새 Unity 6 프로젝트에 MOA FPS(C++/raylib 게임)를 다시 만들었어요. 이동, VK-7 소총, NavMesh 위의 봇 7명, 텍스트 맵 파일에서 가져온 Quarry 맵을 만든 다음, 원작의 Blender 모델, 사진 텍스처, 조명, HUD까지 옮겼어요.
 
-![Direct MCP로 에이전트가 만든 Quarry 맵](docs/demo/overview.jpg)
+![Direct MCP로 에이전트가 만든 1인칭 화면](docs/demo/first-person.jpg)
 
-| 1인칭 | 봇 관전 |
+| 사격하는 봇 (관전 카메라) | Quarry 맵 |
 |---|---|
-| ![1인칭 화면](docs/demo/first-person.jpg) | ![봇을 따라가는 관전 카메라](docs/demo/spectate.jpg) |
+| ![다른 봇을 쏘는 봇](docs/demo/spectate.jpg) | ![Quarry 맵 전경](docs/demo/overview.jpg) |
 
 - **원작과 같은 수치.** 이동, 무기, 봇, 매치 값은 원작의 `.ini` 파일에서 실행 중에 그대로 읽어요.
-- **에이전트가 스스로 검증.** 스크립트 작성 → `refresh_assets` + `unity_status`로 컴파일 에러 확인 → `execute_csharp`로 맵 가져오기(소품 82개, 스폰 18곳), NavMesh 굽기, 프리팹 생성 → `screenshot`으로 보고 뿌연 조명 수정 → `play_mode` + `read_console`로 봇끼리 서로 찾아 쏘는 것과 에러가 없는 걸 확인했어요.
+- **원작과 같은 그래픽.** 원작 GLSL에 맞춘 URP 셰이더(버텍스 컬러, 팀 색, 사진 PBR 표면), 원작 뷰모델 코드대로 자세를 잡은 1인칭 총과 팔, 원작 HUD 코드대로 배치한 HUD.
+- **에이전트가 스스로 검증.** 스크립트 작성 → `refresh_assets` + `unity_status`로 컴파일 에러 확인 → `execute_csharp`로 맵 가져오기(소품 82개, 스폰 18곳), NavMesh 굽기, 프리팹 생성 → `screenshot`으로 조명과 HUD 확인 → `play_mode` + `playtest`로 봇끼리 서로 찾아 쏘는 것과 에러가 없는 걸 확인했어요.
 - **플레이 모드에서 데미지 계산 확인:** 37 m 헤드샷이 44 데미지 = 26 × 0.866(거리 감쇠) × 1.95(헤드).
-- 그래픽은 블록아웃(기본 도형)이고 원작 모델이 아니에요. 헤드리스로만 검증했고, 마우스/키보드 조작감은 아직 사람이 테스트하지 않았어요.
+- 헤드리스로만 검증했고, 마우스/키보드 조작감과 합성 사운드는 아직 사람이 확인하지 않았어요.
 
 ## 설치 (2분)
 

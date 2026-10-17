@@ -11,18 +11,19 @@
 
 ## Demo: MOA FPS in Unity
 
-An agent rebuilt the core loop of MOA FPS (a C++/raylib game) in a new Unity 6 project using only the Direct MCP tools: movement, the VK-7 rifle, 7 bots on a NavMesh, and the Quarry map imported from its text map format.
+An agent rebuilt MOA FPS (a C++/raylib game) in a new Unity 6 project using only the Direct MCP tools: movement, the VK-7 rifle, 7 bots on a NavMesh and the Quarry map imported from its text map format, then brought in the original's own Blender models, photo textures, lighting and HUD.
 
-![Quarry map, built by an agent through Direct MCP](docs/demo/overview.jpg)
+![First-person view with the VK-7, built by an agent through Direct MCP](docs/demo/first-person.jpg)
 
-| First person | Spectating a bot |
+| A bot firing (chase camera) | The Quarry map |
 |---|---|
-| ![First-person view](docs/demo/first-person.jpg) | ![Chase camera following a bot](docs/demo/spectate.jpg) |
+| ![Bot firing at another bot](docs/demo/spectate.jpg) | ![Quarry overview](docs/demo/overview.jpg) |
 
 - **Same numbers as the original.** Movement, weapon, bot and match values are read at runtime from the game's original `.ini` files.
-- **The agent tested its own work.** Scripts → `refresh_assets` + `unity_status` for compile errors → `execute_csharp` to import the map (82 props, 18 spawns), bake the NavMesh and build prefabs → `screenshot` to fix washed-out lighting → `play_mode` + `read_console` to watch bots find and shoot each other with no errors.
+- **Same look as the original.** URP shaders written to match the original's GLSL (baked vertex colours, team paint, photo PBR surfaces), a first-person rig posed like its viewmodel code, and a HUD laid out from its HUD code.
+- **The agent tested its own work.** Scripts → `refresh_assets` + `unity_status` for compile errors → `execute_csharp` to import the map (82 props, 18 spawns), bake the NavMesh and build prefabs → `screenshot` to check lighting and the HUD → `play_mode` + `playtest` to watch bots find and shoot each other with no errors.
 - **Damage math checked in play mode:** a 37 m headshot did 44 damage = 26 × 0.866 (falloff) × 1.95 (head).
-- Blockout art (primitives, not the original models). Verified headless; mouse/keyboard feel has not been tested by a person yet.
+- Verified headless; mouse/keyboard feel and the synthesized sounds have not been checked by a person yet.
 
 ## Install (2 minutes)
 
