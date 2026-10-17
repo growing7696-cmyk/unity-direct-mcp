@@ -19,7 +19,7 @@ namespace DirectMcp
     [InitializeOnLoad]
     public static class McpServer
     {
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
         static readonly string[] SupportedProtocols = { "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05" };
 
         const string Instructions =

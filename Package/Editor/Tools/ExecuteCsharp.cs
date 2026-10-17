@@ -235,7 +235,13 @@ namespace DirectMcp.Tools
                     if (p.ExitCode != 0 || !File.Exists(outDll))
                     {
                         foreach (var line in output.Split('\n'))
-                            if (line.Contains("error")) errors.Add(Regex.Replace(line.Trim(), @"^.*snippet\(", "line("));
+                            if (line.Contains("error"))
+                            {
+                                // Errors in the user's code read "snippet(l,c)"; errors in the generated using lines
+                                // (an unknown namespace in 'usings') would otherwise show the temp file path.
+                                var clean = Regex.Replace(line.Trim(), @"^.*snippet\(", "line(");
+                                errors.Add(Regex.Replace(clean, @"^.*[0-9a-f]{32}\.cs\(\d+,\d+\)", "usings"));
+                            }
                         if (errors.Count == 0) errors.Add(output.Trim());
                         return null;
                     }

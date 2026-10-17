@@ -12,3 +12,4 @@ TestProject/*.sln
 TestProject/.mcp.json
 TestProject/.cursor/
 TestProject/.vscode/
+TestProject/.claude/

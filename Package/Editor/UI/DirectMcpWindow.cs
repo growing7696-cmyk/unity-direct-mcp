@@ -81,7 +81,12 @@ namespace DirectMcp
             GUILayout.Label("Connect your AI", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("One click writes the config into this project. Then open the AI tool in this project folder.", MessageType.None);
 
-            Row("Claude Code", ".mcp.json", () => WriteConfig(".mcp.json", "mcpServers", new JObject { ["type"] = "http", ["url"] = McpServer.Url }));
+            Row("Claude Code", ".mcp.json", () =>
+            {
+                WriteConfig(".mcp.json", "mcpServers", new JObject { ["type"] = "http", ["url"] = McpServer.Url });
+                InstallSkill(quiet: true);
+            });
+            SkillRow();
             Row("Cursor", ".cursor/mcp.json", () => WriteConfig(Path.Combine(".cursor", "mcp.json"), "mcpServers", new JObject { ["url"] = McpServer.Url }));
             Row("VS Code (Copilot)", ".vscode/mcp.json", () => WriteConfig(Path.Combine(".vscode", "mcp.json"), "servers", new JObject { ["type"] = "http", ["url"] = McpServer.Url }));
 
@@ -105,6 +110,65 @@ namespace DirectMcp
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button(configured ? "Update" : "Connect", GUILayout.Width(80))) write();
             }
+        }
+
+        // ─── Claude skill: teaches Claude Code the look → change → compile → play-test loop ───
+
+        const string SkillName = "unity-direct-mcp";
+        static string SkillTarget => Path.Combine(ProjectRoot, ".claude", "skills", SkillName);
+
+        static string SkillSource
+        {
+            get
+            {
+                var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpServer).Assembly);
+                return info == null ? null : Path.Combine(info.resolvedPath, "Skills~", SkillName);
+            }
+        }
+
+        enum SkillState { Missing, Outdated, Current }
+
+        static SkillState GetSkillState()
+        {
+            var src = SkillSource;
+            if (!Directory.Exists(SkillTarget)) return SkillState.Missing;
+            if (src == null || !Directory.Exists(src)) return SkillState.Current;
+            foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
+            {
+                var dst = Path.Combine(SkillTarget, file.Substring(src.Length + 1));
+                if (!File.Exists(dst) || File.ReadAllText(dst) != File.ReadAllText(file)) return SkillState.Outdated;
+            }
+            return SkillState.Current;
+        }
+
+        void SkillRow()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var state = GetSkillState();
+                GUILayout.Label((state == SkillState.Current ? "✓ " : "   ") + "Claude skill", GUILayout.Width(150));
+                GUILayout.Label(state == SkillState.Outdated ? ".claude/skills (update available)" : ".claude/skills", EditorStyles.miniLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(state == SkillState.Missing ? "Install" : "Update", GUILayout.Width(80))) InstallSkill(quiet: false);
+            }
+        }
+
+        void InstallSkill(bool quiet)
+        {
+            var src = SkillSource;
+            if (src == null || !Directory.Exists(src))
+            {
+                Flash("Skill files not found in the package.");
+                return;
+            }
+            foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
+            {
+                if (file.EndsWith(".meta", StringComparison.Ordinal)) continue;
+                var dst = Path.Combine(SkillTarget, file.Substring(src.Length + 1));
+                Directory.CreateDirectory(Path.GetDirectoryName(dst));
+                File.Copy(file, dst, overwrite: true);
+            }
+            if (!quiet) Flash("Installed the Claude skill to .claude/skills/unity-direct-mcp. Claude Code picks it up in new sessions.");
         }
 
         static bool IsConfigured(string relative)
