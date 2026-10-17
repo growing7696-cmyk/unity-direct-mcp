@@ -15,7 +15,7 @@
    ```
 2. **Direct MCP** 창이 열려요. 초록불이면 서버가 켜진 거예요.
 3. 쓰는 AI 도구 옆의 **Connect**를 누르면 프로젝트에 설정 파일이 생겨요.
-   - Claude Code → `.mcp.json`
+   - Claude Code → `.mcp.json` + Claude 스킬(`.claude/skills/`)
    - Cursor → `.cursor/mcp.json`
    - VS Code (Copilot) → `.vscode/mcp.json`
 4. 프로젝트 폴더에서 AI 도구를 열고 요청하세요.
@@ -35,6 +35,17 @@ Unity 2022.3 이상이 필요해요. Unity 6000.6(macOS)에서 테스트했어�
 | `play_mode` | 플레이 시작, 종료, 일시정지, 재개 |
 | `read_console` | 콘솔 로그와 스택 트레이스 (리로드 후에도 유지) |
 | `screenshot` | 게임/씬 카메라 화면을 이미지로 반환 |
+
+## Claude 스킬
+
+도구는 Claude에게 "무엇을 할 수 있는지"를 알려주고, 스킬은 "어떻게 잘하는지"를 알려줘요. Claude Code의 **Connect**를 누르면 프로젝트에 `.claude/skills/unity-direct-mcp/`도 함께 설치돼요. 스킬만 따로 설치하려면 **Claude skill → Install**을 누르세요.
+
+- 바꾸기 전에 먼저 보기 (상태 → 하이어라키 → 검사). 오브젝트 이름을 추측하지 않아요.
+- 컴파일 에러부터 고치고, 스크립트 리로드는 기다렸다가 다시 확인해요.
+- 검증된 C# 레시피 사용: 실행 취소가 되는 오브젝트 생성, private 필드 설정, 렌더 파이프라인에 맞는 머티리얼(분홍색 방지), 프리팹, 태그/레이어, 입력 시스템 확인, 씬, UI
+- "완료"라고 말하기 전에 직접 플레이하고 스크린샷으로 확인해요.
+
+[`references/recipes.md`](Package/Skills~/unity-direct-mcp/references/recipes.md)의 모든 레시피는 실제 유니티 에디터에서 실행해서 검증했어요.
 
 ## 보안
 

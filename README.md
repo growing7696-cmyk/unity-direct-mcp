@@ -20,7 +20,7 @@
 
    | Tool | File written |
    |---|---|
-   | Claude Code | `.mcp.json` |
+   | Claude Code | `.mcp.json` + the [Claude skill](#claude-skill) in `.claude/skills/` |
    | Cursor | `.cursor/mcp.json` |
    | VS Code (Copilot) | `.vscode/mcp.json` |
 
@@ -46,6 +46,17 @@ Requires Unity 2022.3 or newer. Tested on Unity 6000.6 (macOS).
 | `screenshot` | Renders the game or scene camera and returns the image so the agent can look at it. |
 
 Scripts are written with the agent's own file tools (it already edits files well), then `refresh_assets` + `unity_status` report compile errors back.
+
+## Claude skill
+
+Tools tell Claude what it *can* do; the skill tells it how to do it well. Clicking **Connect** for Claude Code also installs `.claude/skills/unity-direct-mcp/` into your project (or use the **Claude skill → Install** row on its own). It teaches Claude to:
+
+- look before changing anything (status → hierarchy → inspect), instead of guessing object names
+- fix compile errors before touching the scene, and wait out script reloads calmly
+- use tested `execute_csharp` recipes: Undo-safe object creation, private fields via `SerializedObject`, materials that match the render pipeline (no pink), prefabs, tags/layers, Input System detection, scenes, UI
+- play-test and look at a screenshot before saying "done"
+
+Every recipe in [`references/recipes.md`](Package/Skills~/unity-direct-mcp/references/recipes.md) is run against a live Editor before release. When the package updates, the window shows **Update** for the skill.
 
 ### Add your own tool
 
